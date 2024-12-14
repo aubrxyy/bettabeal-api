@@ -2,84 +2,59 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Review extends Model
 {
-    use HasFactory;
+    protected $table = 'reviews';
+    protected $primaryKey = 'review_id';
 
     protected $fillable = [
+        'order_id',
+        'order_item_id',
         'user_id',
         'product_id',
-        'order_id',
+        'seller_id',
         'rating',
-        'review_text',
-        'purchase_verified',
-        'review_date',
-        'helpful_count'
+        'comment'
     ];
 
-    protected $casts = [
-        'rating' => 'integer',
-        'purchase_verified' => 'boolean',
-        'review_date' => 'datetime',
-        'helpful_count' => 'integer'
-    ];
-
-    /**
-     * Relasi ke model Product
-     */
     public function product()
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class, 'product_id', 'product_id');
     }
 
-    /**
-     * Relasi ke model User
-     */
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Relasi ke model Order
-     */
     public function order()
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(Order::class, 'order_id', 'order_id');
     }
 
-    /**
-     * Relasi ke model ReviewImage
-     */
-    public function images()
+    public function orderItem()
     {
-        return $this->hasMany(ReviewImage::class);
+        return $this->belongsTo(OrderItem::class, 'order_item_id', 'order_item_id');
     }
 
-    /**
-     * Relasi ke model ReviewComment
-     */
-    public function comments()
+    public function user()
     {
-        return $this->hasMany(ReviewComment::class);
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    /**
-     * Relasi ke model ReviewLike
-     */
-    public function likes()
+    public function seller()
     {
-        return $this->hasMany(ReviewLike::class);
+        return $this->belongsTo(Seller::class, 'seller_id', 'seller_id');
     }
 
-    /**
-     * Relasi ke model SellerResponse
-     */
-    public function sellerResponse()
+    public static function updateSellerRating($sellerId)
     {
-        return $this->hasOne(SellerResponse::class);
+        $averageRating = self::where('seller_id', $sellerId)
+            ->select(\DB::raw('ROUND(AVG(rating), 2) as avg_rating'))
+            ->first();
+
+        return \DB::table('sellers')
+            ->where('seller_id', $sellerId)
+            ->update([
+                'store_rating' => $averageRating->avg_rating ?? 0,
+                'updated_at' => now()
+            ]);
     }
 }

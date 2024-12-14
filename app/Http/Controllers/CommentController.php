@@ -175,24 +175,36 @@ class CommentController extends Controller
     public function show($comment_id)
     {
         try {
-            $comment = Comment::with(['user:id,name', 
-                                    'replies.user:id,name',
-                                    'article:id,title'])
-                             ->findOrFail($comment_id);
+            $comment = Comment::with(['user', 'article', 'replies.user'])
+                ->where('comment_id', $comment_id)
+                ->first();
+
+            // Jika comment tidak ditemukan, return data kosong
+            if (!$comment) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'No comment found',
+                    'data' => null
+                ]);
+            }
+
+            // Jika article sudah dihapus, set article ke null
+            if (!$comment->article) {
+                $comment->article = null;
+            }
 
             return response()->json([
                 'status' => 'success',
+                'message' => 'Comment retrieved successfully',
                 'data' => $comment
             ]);
-        } catch (ModelNotFoundException $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Comment not found'
-            ], 404);
+
         } catch (\Exception $e) {
+            \Log::error('Error in show comment: ' . $e->getMessage());
+            
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to fetch comment',
+                'message' => 'Failed to retrieve comment',
                 'error' => $e->getMessage()
             ], 500);
         }

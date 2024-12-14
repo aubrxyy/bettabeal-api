@@ -3,44 +3,72 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Order extends Model
 {
-    use HasFactory;
-
+    protected $primaryKey = 'order_id';
     protected $fillable = [
         'user_id',
-        'order_number',
-        'status',
+        'seller_id',
+        'address_id',
         'total_amount',
-        'shipping_address',
-        'shipping_method',
-        'payment_method',
-        'payment_status',
-        'notes'
+        'status',
+        'shipping_status',
+        'payment_type',
+        'transaction_id',
+        'snap_token',
+        'paid_at',
+        'payment_url'
     ];
 
-    protected $casts = [
-        'shipping_address' => 'array',
-        'total_amount' => 'decimal:2'
+    protected $dates = [
+        'created_at',
+        'updated_at',
+        'paid_at'
     ];
 
-    // Relasi ke User
+    // Status constants
+    const STATUS_PENDING = 'pending';
+    const STATUS_SUCCESS = 'success';
+    const STATUS_FAILED = 'failed';
+    const STATUS_EXPIRED = 'expired';
+    const STATUS_CANCEL = 'cancel';
+    const STATUS_CHALLENGE = 'challenge';
+
+    // Relationships
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id', 'customer_id');
+    }
+
+    public function address()
+    {
+        return $this->belongsTo(Address::class, 'address_id', 'address_id');
+    }
+
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
+    }
+
+    public function paymentNotifications()
+    {
+        return $this->hasMany(PaymentNotification::class, 'order_id', 'order_id');
+    }
+
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
-    // Relasi ke OrderItem
-    public function details()
+    // Relasi ke order items
+    public function items()
     {
-        return $this->hasMany(OrderDetail::class);
+        return $this->hasMany(OrderItem::class, 'order_id', 'order_id');
     }
 
-    // Relasi ke Review
-    public function reviews()
+    public function seller()
     {
-        return $this->hasMany(Review::class);
+        return $this->belongsTo(Seller::class);
     }
-}
+} 

@@ -18,7 +18,7 @@ class CreateUsersTable extends Migration
             $table->bigIncrements('user_id');  
             $table->string('username')->unique();  // Username field
             $table->string('password');  // Password field
-            $table->enum('role', ['customer', 'seller', 'admin']);  // Role as ENUM ('customer' or 'seller' or 'admin')
+            $table->enum('role', ['customer', 'seller']);  // Role as ENUM ('customer' or 'seller' or 'admin')
             $table->enum('status', ['active', 'suspended'])->default('active'); // Status as ENUM ('active', 'suspended')
             $table->timestamps();  // Laravel's created_at and updated_at fields
         });

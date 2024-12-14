@@ -12,50 +12,23 @@ use App\Http\Controllers\ReviewCommentController;
 use App\Http\Controllers\ReviewResponseController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\ShippingAddressController;
+use App\Http\Controllers\AddressController;
+
 
 // Authentication Routes
 Route::post('/register/customer', [AuthController::class, 'registerCustomer']);
-Route::post('/register/seller', [AuthController::class, 'registerSeller']);
-Route::post('/register/admin', [AuthController::class, 'registerAdmin']);
+// Route::post('/register/seller', [AuthController::class, 'registerSeller']);
+// Route::post('/register/admin', [AuthController::class, 'registerAdmin']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Routes for seller with sanctum and seller middleware
-Route::middleware(['auth:sanctum', 'seller'])->group(function () {
-    Route::get('/home', function () {
-        return response()->json(['message' => 'Selamat datang di Home Seller!']);
-    });
+// Rute untuk mendapatkan profil seller
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/authentication', [AuthController::class, 'getSellerProfile']);
 });
 
-
-// Review Routes
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/reviews', [ReviewController::class, 'store']);
-    Route::put('/reviews/{id}', [ReviewController::class, 'update']);
-    Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
-    
-    // Review Images
-    Route::post('/reviews/{review}/images', [ReviewController::class, 'uploadImages']);
-    Route::delete('/reviews/{review}/images/{image}', [ReviewController::class, 'deleteImage']);
-    
-    // Review Likes
-    Route::post('/reviews/{review}/like', [ReviewLikeController::class, 'like']);
-    Route::delete('/reviews/{review}/like', [ReviewLikeController::class, 'unlike']);
-    
-    // Review Comments
-    Route::post('/reviews/{review}/comments', [ReviewCommentController::class, 'store']);
-    Route::put('/reviews/{review}/comments/{comment}', [ReviewCommentController::class, 'update']);
-    Route::delete('/reviews/{review}/comments/{comment}', [ReviewCommentController::class, 'destroy']);
-    
-    // Seller Response to Review
-    Route::post('/reviews/{review}/response', [ReviewResponseController::class, 'store']);
-    Route::put('/reviews/{review}/response/{response}', [ReviewResponseController::class, 'update']);
-    Route::delete('/reviews/{review}/response/{response}', [ReviewResponseController::class, 'destroy']);
-});
-
-// Public Review Routes
-Route::get('/reviews', [ReviewController::class, 'index']);
-Route::get('/reviews/{id}', [ReviewController::class, 'show']);
-Route::get('/reviews/{review}/comments', [ReviewCommentController::class, 'index']);
 
 
 // Profile Routes
@@ -74,46 +47,90 @@ Route::get('/sellers/{id}', [ProfileController::class, 'showSeller']);
 
 
 // Category Routes
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('categories', [CategoryController::class, 'store']);
-    Route::put('categories/{slug}', [CategoryController::class, 'update']);
-    Route::delete('categories/{slug}', [CategoryController::class, 'destroy']);
+// Public Category Routes
+Route::prefix('categories')->group(function () {
+    Route::get('/', [CategoryController::class, 'index']);
+    Route::get('/{id}/products', [CategoryController::class, 'getProducts']);
 });
-Route::get('categories', [CategoryController::class, 'index']);
-Route::get('categories/{slug}', [CategoryController::class, 'show']);
-Route::get('categories/{slug}/products', [CategoryController::class, 'getProducts']);
+
+// Admin Category Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::prefix('admin/categories')->group(function () {
+        Route::get('/', [CategoryController::class, 'adminIndex']);
+        Route::post('/', [CategoryController::class, 'store']);
+        Route::put('/{id}', [CategoryController::class, 'update']);
+        Route::delete('/{id}', [CategoryController::class, 'destroy']);
+        Route::put('/{id}/restore', [CategoryController::class, 'restore']);
+    });
+});
 
 
 // Product Routes
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/products', [ProductController::class, 'store']);
-    Route::put('/products/{id}', [ProductController::class, 'update']);
-    Route::delete('/products/{id}', [ProductController::class, 'destroy']);
+// Public Routes
+Route::prefix('products')->group(function () {
+    Route::get('/', [ProductController::class, 'index']);
+    Route::get('/{id}', [ProductController::class, 'show']);
+    Route::get('/{productId}/reviews', [ReviewController::class, 'publicReviews']);
 });
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{id}', [ProductController::class, 'show']);
 
+// Protected Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Seller Routes
+    Route::prefix('seller/products')->group(function () {
+        Route::get('/', [ProductController::class, 'sellerIndex']);
+        Route::post('/', [ProductController::class, 'store']);
+        Route::put('/{id}', [ProductController::class, 'update']);
+        Route::delete('/{id}', [ProductController::class, 'destroy']);
+        Route::put('/{id}/restore', [ProductController::class, 'restore']);
+    });
 
-
-// Gallery Product Routes 
-Route::get('gallery-products', [GalleryProductController::class, 'index'])->name('gallery-products.index');
-// Route untuk menampilkan galeri produk berdasarkan ID
-Route::get('gallery-products/{id}', [GalleryProductController::class, 'show'])->name('gallery-products.show');
-
-Route::middleware('auth:sanctum')->group(function () {
+    // Review Routes
     
-    
-    // Route untuk membuat galeri produk baru (hanya seller yang diizinkan)
-    Route::post('gallery-products', [GalleryProductController::class, 'store'])->name('gallery-products.store');
 
+    // Submit review untuk order
+    Route::post('orders/{orderId}/reviews', [ReviewController::class, 'store']);
     
-    // Route untuk mengupdate galeri produk berdasarkan ID
-    Route::put('gallery-products/{id}', [GalleryProductController::class, 'update'])->name('gallery-products.update');
-
-    // Route untuk menghapus galeri produk berdasarkan ID
-    Route::delete('gallery-products/{id}', [GalleryProductController::class, 'destroy'])->name('gallery-products.destroy');
+    // Get review history user yang login
+    Route::get('user/reviews', [ReviewController::class, 'userReviews']);
+    
+    // Get review yang bisa dibuat (dari order yang delivered)
+    Route::get('user/reviewable-orders', [ReviewController::class, 'reviewableOrders']);
 });
+
+// Public Routes
+Route::get('products/{id}/gallery', [GalleryProductController::class, 'index']);
+
+// Protected Routes
+Route::middleware(['auth:sanctum'])->group(function () {
+    // Seller Routes
+    Route::prefix('seller/gallery')->group(function () {
+        Route::post('/upload/{product_Id}', [GalleryProductController::class, 'store']);
+        Route::put('/{id}/main', [GalleryProductController::class, 'setAsMain']);
+        Route::delete('/{id}', [GalleryProductController::class, 'destroy']);
+    });
+
+    // Admin Routes
+    Route::prefix('admin/gallery')->group(function () {
+        Route::delete('/{id}', [GalleryProductController::class, 'adminDestroy']);
+    });
+});
+
+
+
+
+
+
+// Article routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('article', [ArticleController::class, 'store']);
+    Route::put('article/{id}', [ArticleController::class, 'update']);
+    Route::post('article/{id}', [ArticleController::class, 'update']);
+    Route::delete('article/{id}', [ArticleController::class, 'destroy']);
+});
+
+Route::get('article', [ArticleController::class, 'index']);
+Route::get('article/{id}', [ArticleController::class, 'show']);
 
 // Comment Routes 
 
@@ -130,88 +147,154 @@ Route::put('comments/{id}', [CommentController::class, 'update']);
 Route::delete('comments/{id}', [CommentController::class, 'destroy']);
 });
 
-// Article routes
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('article', [ArticleController::class, 'store']);
-    Route::put('article/{id}', [ArticleController::class, 'update']);
-    Route::delete('article/{id}', [ArticleController::class, 'destroy']);
-});
-
-Route::get('article', [ArticleController::class, 'index']);
-Route::get('article/{id}', [ArticleController::class, 'show']);
-
 //chat routes
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/send-message', [ChatController::class, 'sendMessage']);
     Route::get('/messages/{receiver_id}', [ChatController::class, 'getMessages']);
+
+    Route::get('/chat/rooms', [ChatController::class, 'getRooms']);
+    Route::post('/chat/rooms', [ChatController::class, 'createRoom']);
+    
+    // Messages
+    Route::get('/chat/messages/{room_id}', [ChatController::class, 'getMessages']);
+    Route::post('/chat/send-message', [ChatController::class, 'sendMessage']);
+    
+    // Optional: Mark messages as read
+    Route::post('/chat/messages/mark-read', [ChatController::class, 'markAsRead']);
 });
 
-//order routes  
+
+// Cart Routes
+Route::middleware('auth:sanctum')->prefix('cart')->group(function () {
+    // Menampilkan cart
+    Route::get('/', [CartController::class, 'index']);
+    
+    // Menambah item ke cart
+    Route::post('/add', [CartController::class, 'addItem']);
+    
+    Route::put('/decrement/{cart_item_id}', [CartController::class, 'decrementItem']);
+    // Update quantity item di cart
+    Route::put('/items/{cart_item_id}', [CartController::class, 'updateItem']);
+    
+    // Hapus item dari cart
+    Route::delete('/items/{cart_item_id}', [CartController::class, 'removeItem']);
+    
+    // Kosongkan cart
+    Route::post('/clear', [CartController::class, 'clear']);
+    
+    // Pindahkan dari wishlist ke cart
+    Route::post('/add-from-wishlist', [CartController::class, 'addFromWishlist']);
+    
+    // Pindahkan multiple items dari wishlist ke cart
+    Route::post('/add-multiple-from-wishlist', [CartController::class, 'addMultipleFromWishlist']);
+});
+
+// Wishlist Routes
+Route::middleware('auth:sanctum')->prefix('wishlist')->group(function () {
+    // Menampilkan wishlist
+    Route::get('/', [WishlistController::class, 'index']);
+    
+    // Menambah produk ke wishlist
+    Route::post('/add', [WishlistController::class, 'add']);
+    
+    // Hapus produk dari wishlist
+    Route::delete('/{wishlist_id}', [WishlistController::class, 'remove']);
+    
+    // Cek status produk di wishlist
+    Route::get('/check/{product_id}', [WishlistController::class, 'checkStatus']);
+});
+
+
+
+// Order Routes
+
+
 Route::middleware('auth:sanctum')->group(function () {
-    Route::prefix('orders')->group(function () {
-        Route::get('/', [OrderController::class, 'index']);
-        Route::post('/', [OrderController::class, 'store']);
-        Route::get('/{order}', [OrderController::class, 'show']);
-        Route::put('/{order}/status', [OrderController::class, 'updateStatus']);
-        Route::post('/{order}/cancel', [OrderController::class, 'cancel']);
-        Route::get('/history', [OrderController::class, 'getOrderHistory']);
-        Route::get('/pending', [OrderController::class, 'getPendingOrders']);
-    });
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::put('/orders/{orderId}/shipping-status', [OrderController::class, 'updateShippingStatus']);
+    // Route::patch('/orders/{orderId}/payment-status', [OrderController::class, 'updatePaymentStatus']);
+    Route::put('/orders/{orderId}/status', [OrderController::class, 'updateStatus']);
+    Route::get('orders/export/excel', [OrderController::class, 'exportExcel']);
+    Route::get('orders/{order}/export/pdf', [OrderController::class, 'exportPDF']);
+    Route::post('products/import', [OrderController::class, 'importProducts']);
 });
 
+// Address Routes
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/addresses', [AddressController::class, 'index']); // Menampilkan semua alamat
+    Route::post('/addresses', [AddressController::class, 'store']); // Menyimpan alamat baru
+    Route::get('/addresses/{id}', [AddressController::class, 'show']); // Menampilkan alamat berdasarkan ID
+    Route::put('/addresses/{id}', [AddressController::class, 'update']); // Mengupdate alamat
+    Route::delete('/addresses/{id}', [AddressController::class, 'destroy']); // Menghapus alamat
+    Route::put('/addresses/{id}/main', [AddressController::class, 'setAsMain']); // Mengatur alamat sebagai utama
+});
+Route::get('/districts', [AddressController::class, 'getDistricts']);
+Route::get('/districts/{district_id}/poscodes', [AddressController::class, 'getPosCodesByDistrict']);
+
+// Midtrans webhook
+
+
+// Get notification history
+Route::get('notifications', [OrderController::class, 'notificationHistory']);
+
+// Get order with payment notifications
+Route::get('orders/{orderId}/payment', [OrderController::class, 'getOrderWithPayment']);
+
+// Midtrans Notification Webhook
+Route::post('notification', [OrderController::class, 'notification']);
+
+// Get Notification History
+Route::get('notifications/{orderId?}', [OrderController::class, 'getNotificationHistory']);
+
+// Test Notification (development only)
+if (config('app.env') !== 'production') {
+    Route::get('test-notification', [OrderController::class, 'testNotification']);
+}
+
+// Reviews
 
 
 
 
 
-// Route::get('product_list', [ProductController::class, 'product_list']);
-// Route::get('/products', [ProductController::class, 'index']);
-// Route::post('/products', [ProductController::class, 'store']);
-// Route::get('/products/{id}', [ProductController::class, 'show']);
-// Route::put('/products/{id}', [ProductController::class, 'update']);
-// Route::delete('/products/{id}', [ProductController::class, 'destroy']);
 
 
 
 
-#use Illuminate\Http\Request;
-#use Illuminate\Support\Facades\Route;
-#
-#Route::get('/user', function (Request $request) {
- #   return $request->user();
- #})->middleware('auth:sanctum');
 
-// use App\Http\Controllers\AuthController;
-// use App\Http\Controllers\ProductController;
 
-// // Route untuk login
-// Route::post('/login', [AuthController::class, 'login']);
 
-// // Route untuk register (opsional)
-// Route::post('register', [AuthController::class, 'register']);
-// Authentication Routes
 
+
+// // Review Routes
 // Route::middleware('auth:sanctum')->group(function () {
-//     Route::post('/logout', [AuthController::class, 'logout']);
+//     Route::post('/reviews', [ReviewController::class, 'store']);
+//     Route::put('/reviews/{id}', [ReviewController::class, 'update']);
+//     Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
+    
+//     // Review Images
+//     Route::post('/reviews/{review}/images', [ReviewController::class, 'uploadImages']);
+//     Route::delete('/reviews/{review}/images/{image}', [ReviewController::class, 'deleteImage']);
+    
+//     // Review Likes
+//     Route::post('/reviews/{review}/like', [ReviewLikeController::class, 'like']);
+//     Route::delete('/reviews/{review}/like', [ReviewLikeController::class, 'unlike']);
+    
+//     // Review Comments
+//     Route::post('/reviews/{review}/comments', [ReviewCommentController::class, 'store']);
+//     Route::put('/reviews/{review}/comments/{comment}', [ReviewCommentController::class, 'update']);
+//     Route::delete('/reviews/{review}/comments/{comment}', [ReviewCommentController::class, 'destroy']);
+    
+//     // Seller Response to Review
+//     Route::post('/reviews/{review}/response', [ReviewResponseController::class, 'store']);
+//     Route::put('/reviews/{review}/response/{response}', [ReviewResponseController::class, 'update']);
+//     Route::delete('/reviews/{review}/response/{response}', [ReviewResponseController::class, 'destroy']);
+// });
 
-
-
-// Review Routes
-Route::middleware('auth:sanctum')->group(function () {
-    // Basic Review CRUD
-    Route::get('/reviews', [ReviewController::class, 'index']);
-    Route::post('/reviews', [ReviewController::class, 'store']);
-    Route::get('/reviews/{review}', [ReviewController::class, 'show']);
-    Route::put('/reviews/{review}', [ReviewController::class, 'update']);
-    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy']);
-
-    // Review Images
-    Route::post('/reviews/{review}/images', [ReviewController::class, 'uploadImages']);
-    Route::delete('/reviews/{review}/images/{imageId}', [ReviewController::class, 'deleteImage']);
-});
-
-// Public Routes
-Route::get('/products/{product}/reviews', [ReviewController::class, 'getProductReviews']);
-
-
+// // Public Review Routes
+// Route::get('/reviews', [ReviewController::class, 'index']);
+// Route::get('/reviews/{id}', [ReviewController::class, 'show']);
+// Route::get('/reviews/{review}/comments', [ReviewCommentController::class, 'index']);

@@ -4,20 +4,32 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class Cors
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Closure  $next
+     * @return mixed
      */
-    public function handle($request, Closure $next)
+     public function handle(Request $request, Closure $next)
     {
-        return $next($request)
-            ->header('Access-Control-Allow-Origin', '*')
-            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        header("Access-Control-Allow-Origin: *");
+
+        $headers = [
+            'Access-Control-Allow-Methods' => 'POST, GET, OPTIONS, PATCH, PUT, DELETE',
+            'Access-Control-Allow-Headers' => 'Content-Type, X-Auth-Token, Origin, Authorization'
+        ];
+        if ($request->getMethod() == "OPTIONS") {
+            return response('OK')
+                ->withHeaders($headers);
+        }
+
+        $response = $next($request);
+        foreach ($headers as $key => $value)
+            $response->header($key, $value);
+        return $response;
     }
 }

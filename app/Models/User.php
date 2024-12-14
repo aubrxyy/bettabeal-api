@@ -25,7 +25,7 @@ class User extends Authenticatable
     // Relationship to Customer model
     public function customer()
     {
-        return $this->hasOne(Customer::class, 'user_id');
+        return $this->hasOne(Customer::class, 'user_id', 'user_id');
     }
 
     // Method to check if user is a seller

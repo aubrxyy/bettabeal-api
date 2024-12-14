@@ -12,24 +12,28 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-
-        $middleware->web(array_filter([
-            // ... existing web middleware
-            \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
-            \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-        ]));
-
-        $middleware->api(array_filter([
-            // ... existing API middleware
-            \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
-            \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-        ]));
-        
-        $middleware->alias([
-            'seller' => \App\Http\Middleware\CheckSellerRole::class
+        $middleware->validateCsrfTokens(except: [
+            'api/notification',
+            'api/midtrans-notification'
         ]);
-	$middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
-	//
+        
+    //     $middleware->web(array_filter([
+    //         // ... existing web middleware
+    //         \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
+    //         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+    //     ]));
+
+    //     $middleware->api(array_filter([
+    //         // ... existing API middleware
+    //         \Illuminate\Foundation\Http\Middleware\TrimStrings::class,
+    //         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+    //     ]));
+        
+    //     $middleware->alias([
+    //         'seller' => \App\Http\Middleware\CheckSellerRole::class
+    //     ]);
+	// $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+	// //
     
     })
     ->withExceptions(function (Exceptions $exceptions) {
